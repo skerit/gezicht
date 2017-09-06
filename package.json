@@ -1,0 +1,17 @@
+{
+	"name": "gezicht",
+	"description": "library for detecting faces",
+	"version": "0.1.0",
+	"author": "Jelle De Loecker <jelle@develry.be>",
+	"keywords": ["face recognition"],
+	"main": "./lib/init.js",
+	"repository": "git@github.com:skerit/gezicht.git",
+	"dependencies": {
+		"protoblast": "~0.3.9"
+	},
+	"license": "MIT",
+	"engines": {
+		"node": ">=6.6.0"
+	},
+	"private": true
+}
