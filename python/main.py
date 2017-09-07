@@ -2,6 +2,7 @@ import face_recognition
 import importlib
 import numpy as np
 import socket
+import time
 import json
 import sys
 import cv2
@@ -70,6 +71,7 @@ while 1:
 	if cmd == 'learn-face':
 		name = req.get('name')
 		paths = req.get('paths')
+		path_results = []
 		count = 0
 
 		if not name in encodings:
@@ -79,9 +81,33 @@ while 1:
 			image = face_recognition.load_image_file(path)
 			encoding = face_recognition.face_encodings(image)[0]
 			encodings[name].append(encoding)
+
+			count += 1
+
+			# Turn the numpy array into a regular list,
+			# otherwise it'll fail json encoding later
+			path_results.append(encoding.tolist())
+
+		# Just a check on how many paths we did
+		result['count'] = count
+
+		# Give the encodings back to the other side,
+		# they might cache them
+		result['encodings'] = path_results
+	elif cmd == 'add-face-encoding':
+		new_encodings = req.get('encodings')
+		name = req.get('name')
+		count = 0
+
+		if not name in encodings:
+			encodings[name] = []
+
+		for encoding in new_encodings:
+			encodings[name].append(encoding)
 			count += 1
 
 		result['count'] = count
+
 	elif cmd == 'detect-face':
 		path = req.get('file_path')
 		result['faces'] = detectFaceFromPath(path)
@@ -119,5 +145,8 @@ while 1:
 			output['error'] = str(e)
 
 
-	print(json.dumps(output))
+	print(json.dumps(output), flush=True)
 	sys.stdout.flush()
+
+	# We need to sleep for the buffer to flush
+	time.sleep(0.05)
