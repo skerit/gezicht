@@ -5,7 +5,7 @@ import socket
 import time
 import json
 import sys
-import cv2
+#import cv2
 import os
 
 pi_spec = importlib.util.find_spec("picamera")
@@ -121,10 +121,10 @@ while 1:
 				picam = picamera.PiCamera()
 				picam.resolution = (320, 240)
 
-			output = np.empty((240, 320, 3), dtype=np.uint8)
-			picam.capture(output, format="rgb")
+			frame = np.empty((240, 320, 3), dtype=np.uint8)
+			picam.capture(frame, format="rgb")
 
-			result['faces'] = detectFaces(output)
+			result['faces'] = detectFaces(frame)
 
 	elif cmd == 'detect-stream':
 		path = req.get('stream_path');
