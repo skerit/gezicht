@@ -7,12 +7,11 @@ let gezicht = new Gezicht.Gezicht();
 
 console.log('Learning faces');
 
-// Learn the face of Jelle & Roel
-// gezicht will create a new python instance on its own
-gezicht.learnFace('jelle', 'jelle-01.jpg');
+// Learn Roel's face
 gezicht.learnFace('roel', 'roel-01.jpg');
 
-// Add the previously created face encoding of lisenka
+// Add the previously created face encoding of jelle & lisenka
+gezicht.addFaceEncoding('jelle', 'jelle-01.json');
 gezicht.addFaceEncoding('lisenka', 'lisenka-01.json');
 
 // Even though you call this function now,
