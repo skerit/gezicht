@@ -5,7 +5,6 @@ import socket
 import time
 import json
 import sys
-import cv2
 import os
 
 from PIL import Image
@@ -13,13 +12,35 @@ from io import BytesIO
 
 pi_spec = importlib.util.find_spec("picamera")
 found_picam = pi_spec is not None
-picam = False
+_picam = False
+has_cv = False
+picam_options = {
+	'rotation' : 90
+}
 
 # Make stdout flush by default
 #sys.stdout = os.fdopen(sys.stdout.fileno(), 'wb', 0)
 
 # Create the face encodings
 encodings = {}
+
+def getPicam():
+	# If the module isn't available, return False
+	if not found_picam:
+		return False
+
+	# If the camera hasn't been created yet,
+	# do so now
+	if not _picam:
+		import picamera
+		_picam = picamera.PiCamera()
+
+		if picam_options:
+			_picam.rotation = picam_options.get('rotation')
+
+		_picam.resolution = (320, 240)
+
+	return _picam
 
 def detectFaceFromPath(path):
 	image = face_recognition.load_image_file(path)
@@ -47,6 +68,10 @@ def detectFaces(frame):
 			coef = max_size / width
 		else:
 			coef = max_size / height
+
+		if not has_cv:
+			import cv2
+			has_cv = True
 
 		# Resize frame of video for faster face recognition processing
 		frame = cv2.resize(frame, (0, 0), fx=coef, fy=coef)
@@ -171,17 +196,14 @@ while 1:
 		face_result = detectFaceFromPath(path)
 		result.update(face_result)
 	elif cmd == 'detect-picam':
-		if not found_picam:
+		picam = getPicam()
+
+		if not picam:
 			output['error'] = 'Did not find picamera module'
 		else:
 
-			if not picam:
-				import picamera
-				picam = picamera.PiCamera()
-				picam.resolution = (320, 240)
-
 			frame = np.empty((240, 320, 3), dtype=np.uint8)
-			picam.capture(frame, format="rgb")
+			picam.capture(frame, format="rgb", use_video_port=True)
 
 			face_result = detectFaces(frame)
 
