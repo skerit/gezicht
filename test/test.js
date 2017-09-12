@@ -15,22 +15,33 @@ gezicht.learnFace('roel', 'roel-01.jpg');
 // Add the previously created face encoding of lisenka
 gezicht.addFaceEncoding('lisenka', 'lisenka-01.json');
 
-console.log('Creating another python process');
-
-// This creates another instance
-let proc = gezicht.createInstance();
-
 // Even though you call this function now,
 // it'll only start detecting these faces once it has
 // also learned about the 'jelle' and 'roel' faces
-proc.detectFaces('jelle-02.jpg', function gotFaces(err, result) {
+gezicht.detectFaces('jelle-02.jpg', function gotFaces(err, result) {
 	console.log('Scanned jelle-02.jpg:', err, result);
 });
 
 var start = Date.now()
 
-proc.detectFaces('splendida-01.jpg', function gotFaces(err, result) {
+gezicht.detectFaces('splendida-01.jpg', function gotFaces(err, result) {
 	console.log('Scanned splendida-01.jpg', err, result);
+});
+
+gezicht.detectFaces('roel-01.jpg', function gotFaces(err, result) {
+	console.log('Scanned roel-01.jpg', err, result);
+});
+
+gezicht.detectFaces('lisenka-01.jpg', function gotFaces(err, result) {
+	console.log('Scanned lisenka-01.jpg', err, result);
+});
+
+gezicht.detectFaces(fs.createReadStream('splendida-01.jpg'), function gotResult(err, result) {
+	console.log('Scanned splendida-01.jpg stream:', err, result);
+});
+
+gezicht.detectFaces(fs.createReadStream('jelle-01.jpg'), function gotResult(err, result) {
+	console.log('Scanned jelle-01.jpg stream:', err, result);
 });
 
 return

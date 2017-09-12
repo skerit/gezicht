@@ -5,8 +5,11 @@ import socket
 import time
 import json
 import sys
-#import cv2
+import cv2
 import os
+
+from PIL import Image
+from io import BytesIO
 
 pi_spec = importlib.util.find_spec("picamera")
 found_picam = pi_spec is not None
@@ -24,24 +27,77 @@ def detectFaceFromPath(path):
 
 def detectFaces(frame):
 
-	# Resize frame of video to 1/2 size for faster face recognition processing
-	#frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+	# Get the shape of the frame
+	shape = frame.shape
+	width = shape[0]
+	height = shape[1]
+
+	# Create the result dictionary
+	result = {}
+	result['original_size'] = {
+		'width'  : width,
+		'height' : height
+	}
+
+	# Max size is 450x450
+	max_size = 450
+
+	if width > max_size or height > max_size:
+		if width > height:
+			coef = max_size / width
+		else:
+			coef = max_size / height
+
+		# Resize frame of video for faster face recognition processing
+		frame = cv2.resize(frame, (0, 0), fx=coef, fy=coef)
+
+		result['resized'] = {
+			'width'  : frame.shape[0],
+			'height' : frame.shape[1]
+		}
 
 	face_locations = face_recognition.face_locations(frame)
 	face_encodings = face_recognition.face_encodings(frame, face_locations)
 	face_names = []
-	result = []
+	faces = []
+
+	# Get an array of the known faces
+	known_faces = list(encodings.items())
+	left_overs = []
+	remove_seen_faces = True
 
 	# Loop over each face found in the frame to see if it's someone we know.
 	for face_encoding in face_encodings:
 		name = ''
 
-		for key, value in encodings.items():
-			match = face_recognition.compare_faces(value, face_encoding)
+		if remove_seen_faces:
+			# Iterate over the known faces,
+			# we'll pop one each time
+			while known_faces:
+				# Shift the first face from the list
+				face = known_faces.pop(0)
+				key = face[0]
+				value = face[1]
 
-			if match[0]:
-				name = key
-				break
+				match = face_recognition.compare_faces(value, face_encoding)
+
+				if (match[0]):
+					name = key
+					break
+				else:
+					# It doesn't match, add it to the leftovers list
+					left_overs.append(face)
+
+			# Add all the left overs back to the face_names
+			while left_overs:
+				known_faces.append(left_overs.pop(0))
+		else:
+			for key, value in known_faces:
+				match = face_recognition.compare_faces(value, face_encoding)
+
+				if match[0]:
+					name = key
+					break
 
 		face_names.append(name)
 
@@ -54,7 +110,9 @@ def detectFaces(frame):
 			'name'   : name
 		}
 
-		result.append(entry)
+		faces.append(entry)
+
+	result['faces'] = faces
 
 	return result
 
@@ -110,7 +168,8 @@ while 1:
 
 	elif cmd == 'detect-face':
 		path = req.get('file_path')
-		result['faces'] = detectFaceFromPath(path)
+		face_result = detectFaceFromPath(path)
+		result.update(face_result)
 	elif cmd == 'detect-picam':
 		if not found_picam:
 			output['error'] = 'Did not find picamera module'
@@ -124,7 +183,9 @@ while 1:
 			frame = np.empty((240, 320, 3), dtype=np.uint8)
 			picam.capture(frame, format="rgb")
 
-			result['faces'] = detectFaces(frame)
+			face_result = detectFaces(frame)
+
+			result.update(face_result)
 
 	elif cmd == 'detect-stream':
 		path = req.get('stream_path');
@@ -132,14 +193,21 @@ while 1:
 		try:
 			sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
 			sock.connect(path)
-			#f = sock.makefile()
-			#movie = cv2.VideoCapture(sock.fileno())
-			#ret, frame = movie.read()
+			data = False
 
-			ret = face_recognition.load_image_file(sock)
+			while True:
+				buf = sock.recv(4096)
 
-			if not ret:
-				output['error'] = 'Ret is empty: ' + path
+				if not buf:
+					break
+
+				if not data:
+					data = buf
+				else:
+					data = data + buf
+
+			face_result = detectFaceFromPath(BytesIO(data))
+			result.update(face_result)
 
 		except Exception as e:
 			output['error'] = str(e)
